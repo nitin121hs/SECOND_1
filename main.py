@@ -13,6 +13,7 @@ from kivy.uix.videoplayer import VideoPlayer
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivy.uix.floatlayout import FloatLayout
 from kivymd.uix.button import MDRectangleFlatButton, MDFlatButton, MDRaisedButton, MDFillRoundFlatButton, MDFillRoundFlatIconButton, MDRoundFlatIconButton, MDRoundFlatButton, MDFloatingActionButton, MDIconButton
+from kivy.properties import ObjectProperty
 from kivy.metrics import dp
 import requests
 import time
@@ -22,6 +23,7 @@ from android.permissions import request_permissions, Permission
 from kivy.animation import Animation
 from kivy.utils import platform
 from android.storage import primary_external_storage_path
+from kivy.properties import StringProperty
 from kivy.core.clipboard import Clipboard
 import os
 import re
@@ -42,6 +44,22 @@ kv='''
 Manager:
     Fir:
     Sec:
+<Rv>:
+    orientation:'vertical'      
+    adaptive_height:True
+    size_hint_x:1
+    padding:dp(30)   
+    Image:
+        texture:root.texture
+        size_hint:1,None
+        height:1000        
+        allow_stretch:True
+        keep_ratio:False
+   
+
+        
+        
+        
 <Fir>:
     name:'home'
     MDBottomNavigation:
@@ -105,34 +123,39 @@ Manager:
                 md_bg_color:0,0,0,0
                 pos_hint:{'center_y':0.46}
                 size_hint_y:0.9   
-                FloatLayout:                                           
-                    ScrollView:                                           
-                        id:sv1
-                        MDBoxLayout:
-                            id:bl1
-                            orientation:'vertical'    
-                            spacing:dp(30)
-                            padding:dp(10)   
-                            adaptive_height:True
-                                    
-                    MDIconButton:
-                        icon:'plus'            
-                        pos_hint:{'center_x':0.9,'center_y':0.02}
-                        on_press:app.file() 
+                RecycleView:
+                    id:rv1
+                    viewclass:'Rv'
+                    RecycleBoxLayout:
+                        default_size:None,None
+                        default_size_hint:1,None
+                        size_hint_y:None
+                        height:self.minimum_height
+                        orientation:'vertical'                       
                              
+            MDFloatingActionButton:
+                icon:'plus'
+                pos_hint:{'center_x':0.9,'center_y':0.05}
+                on_press:app.file()
 
 
 
-
+        
 
     MDTopAppBar:
         id:ta1
         title:'PUBLIC MSG'
         md_bg_color:(0.027, 0.369, 0.329, 1)
+        left_action_items:[['menu',lambda x:nd1.set_state('open')]]
         pos_hint:{'top':1}
-
+        
+    MDNavigationDrawer:
+        id:nd1
 
 '''
+class Rv(MDBoxLayout):
+    texture=ObjectProperty(None)
+
 
 class Manager(ScreenManager):
 	pass
@@ -248,7 +271,7 @@ class Msg(MDApp):
 	        requests.post(cu,json=d)
 	        Clock.schedule_once(lambda x:toast('SEND SUCCESFULLY'))
 	    except Exception as e:
-	        Clock.schedule_once(lambda x:toast('Error Happen'))
+	        Clock.schedule_once(lambda x,t=e:toast(f'Error Happen:- {e}'))
 	    
 	def load_img(self):
 	    cu=f'https://myfirstapp-449eb-default-rtdb.firebaseio.com/msgimg.json'
@@ -258,13 +281,9 @@ class Msg(MDApp):
 	        try:
 	            data=requests.get(tu).json()
 	            if data !=self.li:
-	                d={}
-	                for k in data:
-	                    if self.li.get(k) != data[k]:
-	                        d[k]=data.get(k).get('image')
-	                        
-	                Clock.schedule_once(lambda x:self.lip(d))
-	                self.li=data	               
+	                self.li=data
+	                Clock.schedule_once(lambda x:self.lip(data))
+       
 	                
 	            else:
 	                pass
@@ -276,15 +295,19 @@ class Msg(MDApp):
 	            
 	def lip(self,p):
 	    try:
-	        #self.b.get_screen('home').ids.bl1.clear_widgets()
+	        self.b.get_screen('home').ids.rv1.data=[]
 	        if isinstance(p,dict):
+	            a=[]
 	            for k,v in p.items():
-	                i=v
+	                i=v.get('image')
 	                d=base64.b64decode(i)
 	                buf=io.BytesIO(d)
 	                c=CoreImage(buf,ext='png').texture
-	                img=Image(texture=c,allow_stretch=True,keep_ratio=False,size_hint_y=None,height=dp(500))
-	                self.b.get_screen('home').ids.bl1.add_widget(img)
+	                a.append({'texture':c})
+	            self.b.get_screen('home').ids.rv1.data=a
+                 	                
+	                
+
 	            		            	             
 	    except Exception as e:
 	        toast(str(e))	            	             	             	             
